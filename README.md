@@ -37,6 +37,16 @@ conda install pyspark openjdk
 <a name="schema2"></a>
 
 # 1. Primera ejecución del contador
+Hemos tenido que cambiar la ruta de los datos. En el archivo original aparecía así :
+~~~ python
+lines = sc.textFile("file:///SparkCourse/ml-100k/u.data")
+~~~
+Y nosotros hemos tenido que ponerlo así:
+~~~ python
+lines = sc.textFile("./ml-100k/u.data")
+~~~
+Simplemente porque nuestra ruta hacia los datos es distinta.
+
 ~~~ python
 (spark-course) ➜  ~ spark-submit ratings.counter.py
 ~~~
