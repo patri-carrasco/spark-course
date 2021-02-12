@@ -1,7 +1,8 @@
 # spark-course
 1. [Primeros pasos](#schema)
 2. [Primera ejecución del contador](#schema2)
-
+3. [Ejecución de friends-by-age.py ](#schema2)
+10. [Enlaces ](#schema2)
 
 <hr>
 
@@ -32,7 +33,7 @@ conda install pyspark openjdk
 ~~~ 
 (spark-course) ➜  ~ pyspark
 ~~~ 
-![spark](001.png)
+![spark](./image/001.png)
 
 <a name="schema2"></a>
 
@@ -50,3 +51,85 @@ Simplemente porque nuestra ruta hacia los datos es distinta.
 ~~~ python
 (spark-course) ➜  ~ spark-submit ratings.counter.py
 ~~~
+
+<a name="schema2"></a>
+
+# 3. Ejecución de friends-by-age.py 
+Vamos analizar la media de amigos por edad.
+
+1º cargamos el archivo fakefriend.csv
+~~~ python
+lines = sc.textFile("./data/fakefriends.csv")
+~~~
+
+2º Creamos RDD pero haciendo un map a los datos con la función parseline
+
+~~~ python
+
+rdd = lines.map(parseLine)
+
+def parseLine(line):
+    fields = line.split(',')
+    age = int(fields[2])
+    numFriends = int(fields[3])
+    return (age, numFriends)
+~~~ 
+3º Creamos una variable con los totales por la edad *totalsByAge*, para ello usamos las acciones mapValues(func) y reduceByKey(func)
+
+*mapValues(func)* crea un nuevo RDD de pares clave/valor, resultado de aplicar únicamente sobre los valores la función func, que recibe un solo parámetro.
+*reduceByKey(func)* devuelve un RDD de pares clave/valor, donde cada clave única se corresponde con las diferentes claves del RDD original, y el valor es el resultado de aplicar una operación reduce sobre los valores correspondientes a una misma clave.
+
+~~~ python
+totalsByAge = rdd.mapValues(lambda x: (x, 1)).reduceByKey(lambda x, y: (x[0] + y[0], x[1] + y[1]))
+~~~
+4º Obtenemos las medias de las edades.
+
+~~~python
+averagesByAge = totalsByAge.mapValues(lambda x: round(x[0] / x[1],2))
+results = averagesByAge.collect()
+for result in results:
+    print(result)
+~~~
+
+![result](./image/002.png)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<hr>
+
+<a name="schema"></a>
+
+# Enlaces que hemos usado
+[Digitalbooks](http://reader.digitalbooks.pro/content/preview/books/41061/book/OEBPS/Text/capitulo_3.html)
