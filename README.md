@@ -1,7 +1,7 @@
 # spark-course
 1. [Primeros pasos](#schema)
 2. [Primera ejecución del contador](#schema2)
-3. [Ejecución de friends-by-age.py ](#schema2)
+3. [Key/ Value RDD'S](#schema2)
 10. [Enlaces ](#schema2)
 
 <hr>
@@ -54,8 +54,9 @@ Simplemente porque nuestra ruta hacia los datos es distinta.
 
 <a name="schema2"></a>
 
-# 3. Ejecución de friends-by-age.py 
-Vamos analizar la media de amigos por edad.
+# 3. Key / Value RDD'S
+
+Vamos analizar la media de amigos por edad y para eso tenemos que ejecutar el archivo friends-by-age.py
 
 1º cargamos el archivo fakefriend.csv
 ~~~ python
@@ -133,3 +134,5 @@ for result in results:
 
 # Enlaces que hemos usado
 [Digitalbooks](http://reader.digitalbooks.pro/content/preview/books/41061/book/OEBPS/Text/capitulo_3.html)
+
+[Spark doc](http://spark.apache.org/docs/latest/api/python/pyspark.html?highlight=mapvalues)
