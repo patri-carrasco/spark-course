@@ -3,6 +3,7 @@
 2. [Primera ejecución del contador](#schema2)
 3. [Key/ Value RDD'S](#schema3)
 4. [Filtering RDD'S](#schema4)
+5. [map VS. flatmap](#schema5)
 10. [Enlaces ](#schema10)
 
 <hr>
@@ -160,19 +161,39 @@ results = maxTemps.collect()
 
 
 
+<a name="schema5"></a>
+
+# 5. map VS. flatmap
+
+Vamos a ver las diferencias entre map y flatmap
+
+`map(func)` retorna un nuevo RDD, resultado de pasar cada uno de los elementos del RDD original como parámetro de la función func.
+
+`flatMap(func)` es similar a map(func) pero en caso de que func retorne una lista o tupla, esta no será mapeada directamente en el RDD resultante, sino que se mapearán individualmente los elementos contenidos.
+
+Ahora vamos a contar cuantas palabras hay en un texto y cuantas veces se repite esa palabra.
 
 
+1º cargamos el archivo fakefriend.csv
+~~~ python
+input = sc.textFile("./data/book.txt")
+~~~
 
+2º aplicamos a `input` la función flatmap para obtener en un array cada palabra por separdo y contamos las veces que esa palabra aparece con `countByValue()`
 
+~~~ python
+words = input.flatMap(lambda x: x.split())
+wordCounts = words.countByValue()
+~~~
 
-
-
-
-
-
-
-
-
+3º imprimimos el resultado
+~~~ python
+for word, count in wordCounts.items():
+    cleanWord = word.encode('ascii', 'ignore')
+    if (cleanWord):
+        print(cleanWord.decode() + " " + str(count))
+~~~
+![result](./image/005.png)
 
 
 
