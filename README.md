@@ -1,8 +1,9 @@
 # spark-course
 1. [Primeros pasos](#schema)
 2. [Primera ejecución del contador](#schema2)
-3. [Key/ Value RDD'S](#schema2)
-10. [Enlaces ](#schema2)
+3. [Key/ Value RDD'S](#schema3)
+4. [Filtering RDD'S](#schema4)
+10. [Enlaces ](#schema10)
 
 <hr>
 
@@ -52,7 +53,7 @@ Simplemente porque nuestra ruta hacia los datos es distinta.
 (spark-course) ➜  ~ spark-submit ratings.counter.py
 ~~~
 
-<a name="schema2"></a>
+<a name="schema3"></a>
 
 # 3. Key / Value RDD'S
 
@@ -75,7 +76,7 @@ def parseLine(line):
     numFriends = int(fields[3])
     return (age, numFriends)
 ~~~ 
-3º Creamos una variable con los totales por la edad *totalsByAge*, para ello usamos las acciones mapValues(func) y reduceByKey(func)
+3º Creamos una variable con los totales por la edad `totalsByAge`, para ello usamos las acciones mapValues(func) y reduceByKey(func)
 
 *mapValues(func)* crea un nuevo RDD de pares clave/valor, resultado de aplicar únicamente sobre los valores la función func, que recibe un solo parámetro.
 *reduceByKey(func)* devuelve un RDD de pares clave/valor, donde cada clave única se corresponde con las diferentes claves del RDD original, y el valor es el resultado de aplicar una operación reduce sobre los valores correspondientes a una misma clave.
@@ -95,16 +96,65 @@ for result in results:
 ![result](./image/002.png)
 
 
+<a name="schema4"></a>
+
+# 4.Filtering RDD'S
+Vamos a obtener la temperatura mínima obsevada por cada estación metereológica.
+
+
+1º cargamos el archivo fakefriend.csv
+~~~ python
+lines = sc.textFile("./data/1800.csv")
+~~~
+
+2º Creamos RDD pero haciendo un map a los datos con la función parseline
+
+~~~ python
+
+rdd = lines.map(parseLine)
+
+def parseLine(line):
+    fields = line.split(',')
+    stationID = fields[0]
+    entryType = fields[2]
+    temperature = float(fields[3]) * 0.1 * (9.0 / 5.0) + 32.0
+    return (stationID, entryType, temperature)
+
+~~~ 
+
+3º Creamos una variable`minTemps` dondes solo vamos a guardar los valores que estén filtrados por el valor  `TMIN`
+~~~ python
+minTemps = parsedLines.filter(lambda x: "TMIN" in x[1])
+~~~
+*filter(func)* retorna un nuevo RDD que solo contiene los elementos del RDD original que satisfacen el predicado especificado en la función func (que retornará True o False)
+
+4º Obtenemos `stationTemps` que cogemos sólo los valores de la posición 0 y 2 del la varible `minTemps` y reducimos los valores por lo que tengan el valor mínimo y por último imprimimos los resultados
+
+~~~ python
+stationTemps = minTemps.map(lambda x: (x[0], x[2]))
+minTemps = stationTemps.reduceByKey(lambda x, y: min(x,y))
+results = minTemps.collect()
+
+for result in results:
+    print(result[0] + "\t{:.2f}F".format(result[1]))
+~~~
+
+![result](./image/003.png)
 
 
 
+Como ejericio hemos creado obtenido el valor máximo.
 
+Sólo hemos cambiado estas líneas
+~~~ python
+maxTemps = parsedLines.filter(lambda x: "TMAX" in x[1])
 
+stationTemps = maxTemps.map(lambda x: (x[0], x[2]))
+maxTemps = stationTemps.reduceByKey(lambda x, y: max(x,y))
+results = maxTemps.collect()
 
-
-
-
-
+~~~
+![result](./image/004.png)
 
 
 
