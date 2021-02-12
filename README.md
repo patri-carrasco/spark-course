@@ -36,7 +36,7 @@ conda install pyspark openjdk
 
 <a name="schema2"></a>
 
-# 1. Primera ejecución del contador
+# 2. Primera ejecución del contador
 Hemos tenido que cambiar la ruta de los datos. En el archivo original aparecía así :
 ~~~ python
 lines = sc.textFile("file:///SparkCourse/ml-100k/u.data")
