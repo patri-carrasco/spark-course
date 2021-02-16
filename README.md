@@ -4,6 +4,7 @@
 3. [Key/ Value RDD'S](#schema3)
 4. [Filtering RDD'S](#schema4)
 5. [map VS. flatmap](#schema5)
+6. [Text normalization with Regex](#schema6)
 10. [Enlaces ](#schema10)
 
 <hr>
@@ -196,8 +197,38 @@ for word, count in wordCounts.items():
 ![result](./image/005.png)
 
 
+<hr>
+
+<a name="schema6"></a>
+
+# 6. Text normalization with Regex  and sorted
+
+1º Importamos librería de expresiones regulares
+~~~ python
+import re
+~~~
+2º Creamos función en la que busca todas las palabras que se ajustan a la expresión regular y las pone en minúscula 
+~~~python
+def normalizeWords(text):
+    return re.compile(r'\W+', re.UNICODE).split(text.lower())
 
 
+input = sc.textFile("./data/book.txt")
+words = input.flatMap(normalizeWords)
+wordCounts = words.countByValue()
+
+~~~
+3º Imprimos el resultado
+![result](./image/006.png)
+
+4º Ordenamos por mayor número. 
+
+~~~ python
+wordCounts = words.map(lambda x: (x, 1)).reduceByKey(lambda x, y: x + y)
+wordCountsSorted = wordCounts.map(lambda x: (x[1], x[0])).sortByKey()
+results = wordCountsSorted.collect()
+
+~~~
 
 <hr>
 
