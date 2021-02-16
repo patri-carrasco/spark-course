@@ -5,6 +5,7 @@
 4. [Filtering RDD'S](#schema4)
 5. [map VS. flatmap](#schema5)
 6. [Text normalization with Regex](#schema6)
+7. [Total spent by customer](#schema7)
 10. [Enlaces ](#schema10)
 
 <hr>
@@ -159,9 +160,6 @@ results = maxTemps.collect()
 ![result](./image/004.png)
 
 
-
-
-
 <a name="schema5"></a>
 
 # 5. map VS. flatmap
@@ -232,6 +230,49 @@ results = wordCountsSorted.collect()
 ~~~
 5º Imprimos el resultado
 ![result](./image/007.png)
+
+<hr>
+
+<a name="schema7"></a>
+
+# 7. Total spent by customer
+1º importamos las librerias de pyspark y creamos la conf
+
+~~~ python
+from pyspark import SparkConf, SparkContext
+
+conf = SparkConf().setMaster("local").setAppName("SpendByCustomer")
+sc = SparkContext(conf = conf)
+~~~
+
+2º Creamos la función que va a separar los valores por las comas
+~~~ python
+def extractCustomerPricePairs(line):
+    fields = line.split(',')
+    return (int(fields[0]), float(fields[2]))
+~~~
+
+3º Cargamos el archivo `customer-order.csv`
+~~~python
+input = sc.textFile("./data/customer-orders.csv")
+~~~
+4º Hacemos el mapeo del archivo `input` con la función `extractCustomerPricePairs` y creamos `totalByCustomer`con la función `reduceBykey`.
+
+~~~python
+mappedInput = input.map(extractCustomerPricePairs)
+totalByCustomer = mappedInput.reduceByKey(lambda x, y: x + y)
+~~~
+5º Obtenemos los resultados y los imprimos.
+~~~ python
+results = totalByCustomer.collect()
+for result in results:
+    print(result)
+~~~
+![result](./image/008.png)
+
+
+
+
 
 <hr>
 
