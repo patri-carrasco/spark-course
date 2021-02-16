@@ -10,7 +10,8 @@ def extractCustomerPricePairs(line):
 input = sc.textFile("./data/customer-orders.csv")
 mappedInput = input.map(extractCustomerPricePairs)
 totalByCustomer = mappedInput.reduceByKey(lambda x, y: x + y)
+totalByCustomerSorted = totalByCustomer.map(lambda x: (x[1], x[0])).sortByKey()
 
-results = totalByCustomer.collect()
+results = totalByCustomerSorted.collect()
 for result in results:
     print(result)
