@@ -221,6 +221,7 @@ wordCounts = words.countByValue()
 3º Imprimos el resultado
 ![result](./image/006.png)
 
+
 4º Ordenamos por mayor número. 
 
 ~~~ python
@@ -229,6 +230,8 @@ wordCountsSorted = wordCounts.map(lambda x: (x[1], x[0])).sortByKey()
 results = wordCountsSorted.collect()
 
 ~~~
+5º Imprimos el resultado
+![result](./image/007.png)
 
 <hr>
 
