@@ -8,6 +8,7 @@
 7. [Total spent by customer](#schema7)
 8. [Introducción a spark-SQL](#schema8)
 9. [Usando las funciones de SQL](#schema9)
+10. [SprakSession.read y withColumn()](#schema10)
 20. [Enlaces ](#schema20)
 
 <hr>
@@ -387,6 +388,73 @@ wordCountsSorted = wordCounts.sort("count")
 wordCountsSorted.show(wordCountsSorted.count())
 ~~~
 ![result](./image/011.png)
+
+<hr>
+
+
+<a name="schema10"></a>
+
+# 10. SprakSession.read y withColumn()
+1º Importamos liberías y creamos la conexión.
+
+~~~python
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as func
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType, FloatType
+
+spark = SparkSession.builder.appName("MinTemperatures").getOrCreate()
+~~~
+2º Creamos el esquema que le vamos a dar  al dataframe
+~~~python
+schema = StructType([ \
+                     StructField("stationID", StringType(), True), \
+                     StructField("date", IntegerType(), True), \
+                     StructField("measure_type", StringType(), True), \
+                     StructField("temperature", FloatType(), True)])
+~~~
+3º Aplicamos a los datos leído el esquema que creamos anteriomente
+~~~python
+
+df = spark.read.schema(schema).csv("./data/1800.csv")
+df.printSchema()
+~~~
+4º Filtramos por `TMIN` y seleccionamos solo las columnas `stationID`y `temperature`
+~~~python
+
+minTemps = df.filter(df.measure_type == "TMIN")
+
+stationTemps = minTemps.select("stationID", "temperature")
+~~~
+5º Hacemos un agrupamiento por `stationID`y obtenemos la temperatura mínima
+~~~Python
+
+minTempsByStation = stationTemps.groupBy("stationID").min("temperature")
+minTempsByStation.show()
+~~~
+6º Comvertimos la temperatura a fahrenheit y las ordenamos
+~~~python
+# Convert temperature to fahrenheit and sort the dataset
+minTempsByStationF = minTempsByStation.withColumn("temperature",
+                                                  func.round(func.col("min(temperature)") * 0.1 * (9.0 / 5.0) + 32.0, 2))\
+                                                  .select("stationID", "temperature").sort("temperature")
+~~~
+7º Imprimimos los resultado y cerramos la conexión
+~~~Python                                                  
+# Collect, format, and print the results
+results = minTempsByStationF.collect()
+
+for result in results:
+    print(result[0] + "\t{:.2f}F".format(result[1]))
+    
+spark.stop()
+
+~~~
+
+![result](./image/012.png)
+
+
+
+
 
 <hr>
 
