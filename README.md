@@ -6,8 +6,9 @@
 5. [map VS. flatmap](#schema5)
 6. [Text normalization with Regex](#schema6)
 7. [Total spent by customer](#schema7)
-8. [Introduction to sparl SQL](#schema8)
-10. [Enlaces ](#schema10)
+8. [Introducción a spark-SQL](#schema8)
+9. [Usando las funciones de SQL](#schema9)
+20. [Enlaces ](#schema20)
 
 <hr>
 
@@ -275,7 +276,7 @@ for result in results:
 
 <a name="schema8"></a>
 
-# 8. Introduction to sparl SQL
+# 8. Introducción a spark-SQL
 *   DataFrames and Datasets
     - Contiene fila de objetos
     - Puede hacer queries a SQL
@@ -348,7 +349,48 @@ friendsByAge.groupBy("age").agg(func.round(func.avg("friends"), 2)
 ~~~
 <hr>
 
-<a name="schema"></a>
+<a name="schema8"></a>
+
+# 9. Usando las funciones de SQL.
+Se usan para dataframes.
+
+* func.explode => Muy parecida a flatmap
+* func.split => Parecida a split
+* func.lower => Parecida a lower
+
+1º Importamos las librerías
+~~~ python
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as func
+~~~
+2º Creamos la conexión y cargamos los datos
+~~~python
+spark = SparkSession.builder.appName("WordCount").getOrCreate()
+
+# Read each line of my book into a dataframe
+inputDF = spark.read.text("./data/book.txt")
+~~~
+3º Dividimos usando una expresión regular que extrae palabras
+
+~~~ python
+words = inputDF.select(func.explode(func.split(inputDF.value, "\\W+")).alias("word"))
+words.filter(words.word != "")
+~~~
+4º Las ponemos todas en minsúculas
+~~~ python
+lowercaseWords = words.select(func.lower(words.word).alias("word"))
+~~~
+5º Contamos cuantas aparaciones de cada palabra, las ordenamos e imprimimos por pantalla
+~~~ python
+wordCounts = lowercaseWords.groupBy("word").count()
+wordCountsSorted = wordCounts.sort("count")
+wordCountsSorted.show(wordCountsSorted.count())
+~~~
+![result](./image/011.png)
+
+<hr>
+
+<a name="schema20"></a>
 
 # Enlaces que hemos usado
 [Digitalbooks](http://reader.digitalbooks.pro/content/preview/books/41061/book/OEBPS/Text/capitulo_3.html)
