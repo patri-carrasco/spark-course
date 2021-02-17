@@ -6,6 +6,7 @@
 5. [map VS. flatmap](#schema5)
 6. [Text normalization with Regex](#schema6)
 7. [Total spent by customer](#schema7)
+8. [Introduction to sparl SQL](#schema8)
 10. [Enlaces ](#schema10)
 
 <hr>
@@ -270,7 +271,65 @@ for result in results:
 ~~~
 ![result](./image/008.png)
 
+<hr>
 
+<a name="schema8"></a>
+
+# 8. Introduction to sparl SQL
+*   DataFrames and Datasets
+    - Contiene fila de objetos
+    - Puede hacer queries a SQL
+    - Puedes tener esquemas
+    - Lee y escribe en JSON, ..
+    - Comunición JDBC/ ODBC, Tableau
+
+1º Importamos las librerías para poder trabajar con los DataFrame
+~~~ python
+from pyspark.sql import SparkSession
+from pyspark.sql import Row
+~~~
+
+2º Creamos una session SparkSession
+~~~ Python
+spark = SparkSession.builder.appName("SparkSQL").getOrCreate()
+~~~
+3º Definimos una función que va a convertir los datos en filas
+~~~ python
+def mapper(line):
+    fields = line.split(',')
+    return Row(ID=int(fields[0]), name=str(fields[1].encode("utf-8")), age=int(fields[2]), numFriends=int(fields[3]))
+~~~
+4º Cargamos lo datos, creamos RDD y las mapeamos con la función.
+~~~ python
+
+lines = spark.sparkContext.textFile("./data/fakefriends.csv")
+people = lines.map(mapper)
+~~~
+
+5º definimo  el esquema y registre el DataFrame como una tabla.
+~~~python
+schemaPeople = spark.createDataFrame(people).cache()
+schemaPeople.createOrReplaceTempView("people")
+~~~
+6º Hacemos las queries e imprimimos los resultados
+~~~ python
+teenagers = spark.sql("SELECT * FROM people WHERE age >= 13 AND age <= 19")
+
+
+for teen in teenagers.collect():
+  print(teen)
+~~~
+7º También podemos hacer instacias de SQL queries
+~~~ python
+ schemaPeople.groupBy("age").count().orderBy("age").show()
+~~~
+
+8º Cerramos sesión
+~~~ python 
+spark.stop()
+~~~
+![result](./image/009.png)
+![result](./image/010.png)
 
 
 
@@ -282,3 +341,5 @@ for result in results:
 [Digitalbooks](http://reader.digitalbooks.pro/content/preview/books/41061/book/OEBPS/Text/capitulo_3.html)
 
 [Spark doc](http://spark.apache.org/docs/latest/api/python/pyspark.html?highlight=mapvalues)
+
+[Datacamp](https://www.datacamp.com/community/blog/pyspark-cheat-sheet-python)
