@@ -306,7 +306,7 @@ lines = spark.sparkContext.textFile("./data/fakefriends.csv")
 people = lines.map(mapper)
 ~~~
 
-5º definimo  el esquema y registre el DataFrame como una tabla.
+5º Definimos  el esquema y registre el DataFrame como una tabla.
 ~~~python
 schemaPeople = spark.createDataFrame(people).cache()
 schemaPeople.createOrReplaceTempView("people")
@@ -314,7 +314,6 @@ schemaPeople.createOrReplaceTempView("people")
 6º Hacemos las queries e imprimimos los resultados
 ~~~ python
 teenagers = spark.sql("SELECT * FROM people WHERE age >= 13 AND age <= 19")
-
 
 for teen in teenagers.collect():
   print(teen)
@@ -331,8 +330,22 @@ spark.stop()
 ![result](./image/009.png)
 ![result](./image/010.png)
 
+9º Ejercicio media de amigos por edad.
+~~~ python
+# Select only age and numFriends columns
+friendsByAge = people.select("age", "friends")
 
+# From friendsByAge we group by "age" and then compute average
+friendsByAge.groupBy("age").avg("friends").show()
 
+#Sorted 
+friendsByAge.groupBy("age").avg("friends").sort("age").show()
+
+# With a custom column name
+friendsByAge.groupBy("age").agg(func.round(func.avg("friends"), 2)
+  .alias("friends_avg")).sort("age").show()
+
+~~~
 <hr>
 
 <a name="schema"></a>
