@@ -5,10 +5,16 @@ from pyspark.sql.types import StructType, StructField, StringType, IntegerType, 
 #Create session
 spark = SparkSession.builder.appName("TotalSpentByCustomer").master("local[*]").getOrCreate()
 
+spark = SparkSession.builder.getOrCreate()
+spark.sparkContext.setLogLevel("ERROR")
+
+
+
 # Create schema when reading customer-orders
 schema = StructType([ StructField("cust_id", IntegerType(), True),
                       StructField("item_id", IntegerType(), True),
                      StructField("amount_spent", FloatType(), True)])
+
 
 # Load up the data into spark dataset
 customerDF = spark.read.schema(schema).csv("./data/customer-orders.csv")
