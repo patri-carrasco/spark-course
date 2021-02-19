@@ -552,6 +552,7 @@ spark.stop()
 # 12. Most popular superhero
 
 `most-popular-superhero-dataframe.py`
+
 1º Importamos librerías, creamos sesión y hacemos el esquema del dataframe
 ~~~Python
 schema = StructType([ \
@@ -582,7 +583,7 @@ mostPopularName = names.filter(func.col("id") == mostPopular[0]).select("name").
 print(mostPopularName[0] + " is the most popular superhero with " + str(mostPopular[1]) + " co-appearances.")
 ~~~
 
-`CAPTAIN AMERICA is the most popular superhero with 1933 co-appearances.     `
+`CAPTAIN AMERICA is the most popular superhero with 1933 co-appearances.`
 
 
 <hr>
@@ -595,3 +596,5 @@ print(mostPopularName[0] + " is the most popular superhero with " + str(mostPopu
 [Spark doc](http://spark.apache.org/docs/latest/api/python/pyspark.html?highlight=mapvalues)
 
 [Datacamp](https://www.datacamp.com/community/blog/pyspark-cheat-sheet-python)
+
+[Breadth-First-Search](https://en.wikipedia.org/wiki/Breadth-first_search)
