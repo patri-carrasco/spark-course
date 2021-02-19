@@ -10,6 +10,7 @@
 8. [Introducción a spark-SQL](#schema8)
 9. [Usando las funciones de SQL](#schema9)
 10. [SprakSession.read y withColumn()](#schema10)
+11. [Broadcast variables](#schema11)
 20. [Enlaces ](#schema20)
 
 <hr>
@@ -466,6 +467,89 @@ spark.stop()
 ~~~
 
 ![result](./image/012.png)
+
+<hr>
+
+<a name="schema11"></a>
+
+# 11. Broadcast varialbes
+Las variables difundidas (conocidas en la terminología inglesa como broadcast variables) permiten guardar una variable de solo lectura en cada máquina, sin necesidad de enviar una copia de esta cada vez que se envíe una tarea al nodo. 
+
+Cuando se definen múltiples transformaciones y operaciones, Spark automáticamente dispersa los datos necesarios por las tareas en cada etapa. Difundir explícitamente variables solo es útil cuando las tareas, en sus múltiples etapas, necesitan siempre los mismos datos.
+
+Para difundir una variable se debe usar el método broadcast(var) de la clase SparkContext.
+1º Cargamos las librerías  importamos codecs, porque vamos a usar u.ITEM
+~~~ python
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as func
+from pyspark.sql.types import StructType, StructField, IntegerType, LongType
+import codecs 
+~~~
+2º Creamos la función `loadMoviesNames`, que genera un diccionario con el nombre de la película y el ID
+~~~python
+def loadMovieNames():
+    movieNames = {}
+    # CHANGE THIS TO THE PATH TO YOUR u.ITEM FILE:
+    with codecs.open("./data/ml-100k/u.ITEM", "r", encoding='ISO-8859-1', errors='ignore') as f:
+        for line in f:
+            fields = line.split('|')
+            movieNames[int(fields[0])] = fields[1]
+  
+     return movieNames
+~~~
+3º Creamos la sesión
+~~~ python
+spark = SparkSession.builder.appName("PopularMovies").getOrCreate()
+spark.sparkContext.setLogLevel("ERROR")
+~~~
+4º  Creamos la variable broadcast
+~~~python
+nameDict = spark.sparkContext.broadcast(loadMovieNames())
+~~~
+5º Creamos el esquema para leer el achivo u.data, cargamos el archivo como dataframe y creamos la varibale `movieCounts` que agrupa por `movieId`y las cuenta
+~~~python
+schema = StructType([ \
+                     StructField("userID", IntegerType(), True), \
+                     StructField("movieID", IntegerType(), True), \
+                     StructField("rating", IntegerType(), True), \
+                     StructField("timestamp", LongType(), True)])
+
+
+moviesDF = spark.read.option("sep", "\t").schema(schema).csv("./data/ml-100k/u.data")
+
+movieCounts = moviesDF.groupBy("movieID").count()
+~~~
+6º Creamos una función `user-defined` o `UDF`  busca los nombre de la peliculas en el broadcast diccionario
+~~~python
+
+def lookupName(movieID):
+    return nameDict.value[movieID]
+
+lookupNameUDF = func.udf(lookupName)
+~~~
+7º Añadimos la columna título al udf, ordenamos y mostramos los 10 primeros
+~~~python
+moviesWithNames = movieCounts.withColumn("movieTitle", lookupNameUDF(func.col("movieID")))
+
+# Sort the results
+sortedMoviesWithNames = moviesWithNames.orderBy(func.desc("count"))
+
+# Grab the top 10
+sortedMoviesWithNames.show(10, False)
+
+# Stop the session
+spark.stop()
+~~~
+![result](./image/014.png)
+
+
+
+
+
+
+
+
+
 
 
 
