@@ -11,6 +11,7 @@
 9. [Usando las funciones de SQL](#schema9)
 10. [SprakSession.read y withColumn()](#schema10)
 11. [Broadcast variables](#schema11)
+12. [Most popular superhero](#schema12)
 20. [Enlaces ](#schema20)
 
 <hr>
@@ -473,6 +474,7 @@ spark.stop()
 <a name="schema11"></a>
 
 # 11. Broadcast varialbes
+`popular-movies-nice-dataframe.py`
 Las variables difundidas (conocidas en la terminología inglesa como broadcast variables) permiten guardar una variable de solo lectura en cada máquina, sin necesidad de enviar una copia de esta cada vez que se envíe una tarea al nodo. 
 
 Cuando se definen múltiples transformaciones y operaciones, Spark automáticamente dispersa los datos necesarios por las tareas en cada etapa. Difundir explícitamente variables solo es útil cuando las tareas, en sus múltiples etapas, necesitan siempre los mismos datos.
@@ -543,16 +545,44 @@ spark.stop()
 ![result](./image/014.png)
 
 
+<hr>
 
+<a name="schema12"></a>
 
+# 12. Most popular superhero
 
+`most-popular-superhero-dataframe.py`
+1º Importamos librerías, creamos sesión y hacemos el esquema del dataframe
+~~~Python
+schema = StructType([ \
+                     StructField("id", IntegerType(), True), \
+                     StructField("name", StringType(), True)])
+~~~
+2º Cargamos los archivos `Marvel-Names.txt`y `Marvel-Graph.txt`
+~~~python
+names = spark.read.schema(schema).option("sep", " ").csv("./data/Marvel-Names.txt")
 
+lines = spark.read.text("./data/Marvel-Graph.txt")
+~~~
+3º Creamos `connections`, le añadimos dos columnas la `id` y `connections`. Lo agrupamos por `id` y sumamos las `connectiones`
+~~~Python
 
+connections = lines.withColumn("id", func.split(func.trim(func.col("value")), " ")[0]) \
+    .withColumn("connections", func.size(func.split(func.trim(func.col("value")), " ")) - 1) \
+    .groupBy("id").agg(func.sum("connections").alias("connections"))
+~~~
+4º Obtenemos los mas ppopulares y los ordenamos.
+~~~python    
+mostPopular = connections.sort(func.col("connections").desc()).first()
 
+mostPopularName = names.filter(func.col("id") == mostPopular[0]).select("name").first()
+~~~
+5º Imprimimos el mas popular.
+~~~ python
+print(mostPopularName[0] + " is the most popular superhero with " + str(mostPopular[1]) + " co-appearances.")
+~~~
 
-
-
-
+`CAPTAIN AMERICA is the most popular superhero with 1933 co-appearances.     `
 
 
 <hr>
