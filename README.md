@@ -13,6 +13,7 @@
 11. [Broadcast variables](#schema11)
 12. [Most popular superhero](#schema12)
 13. [Introducing Breadth-First-Search](#schema13)
+14. [Item-Based Collaborative Filtering in Spark, cache(), and persist()](#schema14)
 20. [Enlaces ](#schema20)
 
 <hr>
@@ -721,6 +722,142 @@ for iteration in range(0, 10):
 ![result](./image/015.png)
 
 
+<hr>
+
+<a name="schema14"></a>
+
+# 14. Item-Based Collaborative Filtering in Spark, cache(), and persist()
+![result](./image/016.png)
+
+En un RDD de gran tamaño, recalcular dos veces una misma transformación conllevará un sobrecoste nada despreciable en términos de tiempo de ejecución. Para evitarlo, Spark provee dos métodos, `persist()` y `cache()`, para guardar transformaciones intermedias y poder reutilizarlas, evitando repetir varias veces un mismo grupo de cálculos. La diferencia entre ambos es que `cache()` guarda los RDD en el nivel de almacenamiento por defecto (como objetos de Java serializados en la memoria principal) y `persist([nivel])` permite, mediante un parámetro opcional, elegir un nivel de almacenamiento de entre las siguientes constantes.
+
+0 Para ejecutar este programa, 50 es el id de la película.
+~~~python
+spark-submit movie-similarities-dataframe.py 50
+~~~
+1º Importamos sys para poder coger el argumento que no entra por parámetros en la ejecución
+~~~python
+import sys
+~~~ 
+2º Creamos el cosinesimilarity con los ratings
+~~~python
+def computeCosineSimilarity(spark, data):
+    # Compute xx, xy and yy columns
+    pairScores = data \
+      .withColumn("xx", func.col("rating1") * func.col("rating1")) \
+      .withColumn("yy", func.col("rating2") * func.col("rating2")) \
+      .withColumn("xy", func.col("rating1") * func.col("rating2")) 
+
+    # Compute numerator, denominator and numPairs columns
+    calculateSimilarity = pairScores \
+      .groupBy("movie1", "movie2") \
+      .agg( \
+        func.sum(func.col("xy")).alias("numerator"), \
+        (func.sqrt(func.sum(func.col("xx"))) * func.sqrt(func.sum(func.col("yy")))).alias("denominator"), \
+        func.count(func.col("xy")).alias("numPairs")
+      )
+
+    # Calculate score and select only needed columns (movie1, movie2, score, numPairs)
+    result = calculateSimilarity \
+      .withColumn("score", \
+        func.when(func.col("denominator") != 0, func.col("numerator") / func.col("denominator")) \
+          .otherwise(0) \
+      ).select("movie1", "movie2", "score", "numPairs")
+
+    return result
+~~~
+3º Obtenemos el nombre de la peli por el movie id
+~~~ python
+# Get movie name by given movie id 
+def getMovieName(movieNames, movieId):
+    result = movieNames.filter(func.col("movieID") == movieId) \
+        .select("movieTitle").collect()[0]
+
+    return result[0]
+~~~
+4º Creamos sesión, los esquemas para los datos y leemos los datos. 
+~~~python
+
+spark = SparkSession.builder.appName("MovieSimilarities").master("local[*]").getOrCreate()
+spark.sparkContext.setLogLevel("ERROR")
+movieNamesSchema = StructType([ \
+                               StructField("movieID", IntegerType(), True), \
+                               StructField("movieTitle", StringType(), True) \
+                               ])
+    
+moviesSchema = StructType([ \
+                     StructField("userID", IntegerType(), True), \
+                     StructField("movieID", IntegerType(), True), \
+                     StructField("rating", IntegerType(), True), \
+                     StructField("timestamp", LongType(), True)])
+    
+    
+# Create a broadcast dataset of movieID and movieTitle.
+# Apply ISO-885901 charset
+movieNames = spark.read \
+      .option("sep", "|") \
+      .option("charset", "ISO-8859-1") \
+      .schema(movieNamesSchema) \
+      .csv("./data/ml-100k/u.item")
+
+# Load up movie data as dataset
+movies = spark.read \
+      .option("sep", "\t") \
+      .schema(moviesSchema) \
+      .csv("./data/ml-100k/u.data")
+~~~
+5º Creamos ratings con los valores de `"userId", "movieId", "rating"`
+~~~python
+
+ratings = movies.select("userId", "movieId", "rating")
+~~~
+6º  Obtenemos todas las películas clasificadas juntas por el mismo usuario. Hacemos un `join` para encontrar todas las combinaciones.  Selecionamos pares de películas y pares de calificación
+~~~python
+
+moviePairs = ratings.alias("ratings1") \
+      .join(ratings.alias("ratings2"), (func.col("ratings1.userId") == func.col("ratings2.userId")) \
+            & (func.col("ratings1.movieId") < func.col("ratings2.movieId"))) \
+      .select(func.col("ratings1.movieId").alias("movie1"), \
+        func.col("ratings2.movieId").alias("movie2"), \
+        func.col("ratings1.rating").alias("rating1"), \
+        func.col("ratings2.rating").alias("rating2"))
+
+
+moviePairSimilarities = computeCosineSimilarity(spark, moviePairs).cache()
+~~~
+7º Programa pincipal
+~~~python
+if (len(sys.argv) > 1):
+    
+    scoreThreshold = 0.97
+    coOccurrenceThreshold = 50.0
+
+    movieID = int(sys.argv[1])
+
+    # Filter for movies with this sim that are "good" as defined by
+    # our quality thresholds above
+    filteredResults = moviePairSimilarities.filter( \
+        ((func.col("movie1") == movieID) | (func.col("movie2") == movieID)) & \
+          (func.col("score") > scoreThreshold) & (func.col("numPairs") > coOccurrenceThreshold))
+
+    # Sort by quality score.
+    results = filteredResults.sort(func.col("score").desc()).take(10)
+    
+    print ("Top 10 similar movies for " + getMovieName(movieNames, movieID))
+    
+    for result in results:
+        # Display the similarity result that isn't the movie we're looking at
+        similarMovieID = result.movie1
+        if (similarMovieID == movieID):
+          similarMovieID = result.movie2
+        
+        print(getMovieName(movieNames, similarMovieID) + "\tscore: " \
+              + str(result.score) + "\tstrength: " + str(result.numPairs))
+else:
+  print("Need argument")
+~~~
+        
+![result](./image/017.png)
 
 <hr>
 
