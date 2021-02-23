@@ -16,6 +16,7 @@
 14. [Item-Based Collaborative Filtering in Spark, cache(), and persist()](#schema14)
 15. [Introducing Spark.ML](#schema15)
 16. [Linear Regression Spark.ML](#schema16)
+17. [Decision Tree Spark.ML](#schema17)
 20. [Enlaces ](#schema20)
 
 <hr>
@@ -1000,6 +1001,64 @@ if __name__ == "__main__":
 
 
 
+<hr>
+
+<a name="schema17"></a>
+
+# 17. Decision Tree Spark.ML
+1º Importar librerías
+
+~~~python
+from __future__ import print_function
+
+from pyspark.ml.regression import DecisionTreeRegressor
+from pyspark.sql import SparkSession
+from pyspark.ml.feature import VectorAssembler
+~~~
+2º Crear sesion de spark y cargar los datos
+~~~python
+if __name__ == "__main__":
+
+    spark = SparkSession.builder.appName("DecisionTree").getOrCreate()
+    data = spark.read.option("header", "true").option("inferSchema", "true").csv("./data/realestate.csv")
+~~~
+3º Creamos el `assembler` que son los datos con los que vamos a crear las predicciones
+~~~python
+    assembler = VectorAssembler().setInputCols(["HouseAge", "DistanceToMRT", \
+                               "NumberConvenienceStores"]).setOutputCol("features")
+~~~
+4º Creamos el dataframe `df` con `features` y `PriceOfUnitArea`
+~~~python   
+    df = assembler.transform(data).select("PriceOfUnitArea", "features")
+~~~
+5º Separamos los datos en dos datas, uno para training y otro para test
+~~~python
+    trainTest = df.randomSplit([0.5, 0.5])
+    trainingDF = trainTest[0]
+    testDF = trainTest[1]
+~~~
+6º Creamos nuestro decision tree y lo entrenamos con los valores de entrenamiento
+~~~python
+   dtr = DecisionTreeRegressor().setFeaturesCol("features").setLabelCol("PriceOfUnitArea")
+   model = dtr.fit(trainingDF)
+~~~
+7º Evaluamos las prediciones con los valores de test e imprimimos los resultados
+~~~python
+    fullPredictions = model.transform(testDF).cache()
+
+    predictions = fullPredictions.select("prediction").rdd.map(lambda x: x[0])
+    labels = fullPredictions.select("PriceOfUnitArea").rdd.map(lambda x: x[0])
+
+    predictionAndLabel = predictions.zip(labels).collect()
+
+    for prediction in predictionAndLabel:
+      print(prediction)
+
+    # Stop the session
+    spark.stop()
+~~~
+
+![result](./image/020.png)
 
 <hr>
 
