@@ -15,6 +15,7 @@
 13. [Introducing Breadth-First-Search](#schema13)
 14. [Item-Based Collaborative Filtering in Spark, cache(), and persist()](#schema14)
 15. [Introducing Spark.ML](#schema15)
+16. [Linear Regression Spark.ML](#schema16)
 20. [Enlaces ](#schema20)
 
 <hr>
@@ -934,6 +935,71 @@ for userRecs in recommendations:
 ~~~
 
 ![result](./image/018.png)
+
+<hr>
+
+<a name="schema16"></a>
+
+# 16. Linear Regression Spark.ML
+1º Importamos librerías
+~~~python
+
+from __future__ import print_function
+
+from pyspark.ml.regression import LinearRegression
+
+from pyspark.sql import SparkSession
+from pyspark.ml.linalg import Vectors
+~~~
+2º Creamos la sesion, cargamos los datos y los convertimos al formato esperado por MLLib
+~~~Python
+if __name__ == "__main__":
+
+    spark = SparkSession.builder.appName("LinearRegression").getOrCreate()
+
+    inputLines = spark.sparkContext.textFile("./data/regression.txt")
+    data = inputLines.map(lambda x: x.split(",")).map(lambda x: (float(x[0]), Vectors.dense(float(x[1]))))
+~~~
+3º Convertimos el RDD a dataframe
+~~~python
+    # Convert this RDD to a DataFrame
+    colNames = ["label", "features"]
+    df = data.toDF(colNames)
+~~~ 
+4º Separamps el dataframe en partes iguales para el training y el test
+~~~python
+      # Let's split our data into training data and testing data
+    trainTest = df.randomSplit([0.5, 0.5])
+    trainingDF = trainTest[0]
+    testDF = trainTest[1]
+~~~
+5º Creamos el modelo de linear regression y lo entrenamos
+~~~python
+
+    lir = LinearRegression(maxIter=10, regParam=0.3, elasticNetParam=0.8)
+
+    model = lir.fit(trainingDF)
+~~~
+6º Generamos las predicciones e imprimimos
+~~~python
+    
+    fullPredictions = model.transform(testDF).cache()
+    predictions = fullPredictions.select("prediction").rdd.map(lambda x: x[0])
+    labels = fullPredictions.select("label").rdd.map(lambda x: x[0])
+
+    predictionAndLabel = predictions.zip(labels).collect()
+
+    
+    for prediction in predictionAndLabel:
+      print(prediction)
+
+    # Stop the session
+    spark.stop()
+~~~
+![result](./image/019.png)
+
+
+
 
 <hr>
 
